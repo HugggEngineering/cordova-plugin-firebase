@@ -103,97 +103,88 @@ public class FirebasePluginMessagingService extends FirebaseMessagingService {
         Log.d(TAG, "Notification Message Sound: " + sound);
         Log.d(TAG, "Notification Message Lights: " + lights);
 
-        // TODO: Add option to developer to configure if show notification when app on foreground
         if (!TextUtils.isEmpty(text) || !TextUtils.isEmpty(title) || (data != null && !data.isEmpty())) {
-            boolean showNotification = (FirebasePlugin.inBackground() || !FirebasePlugin.hasNotificationsCallback()) && (!TextUtils.isEmpty(text) || !TextUtils.isEmpty(title));
-            sendNotification(id, title, text, data, showNotification, sound, lights);
+            sendNotification(id, title, text, data, sound, lights);
         }
     }
 
-    private void sendNotification(String id, String title, String messageBody, Map<String, String> data, boolean showNotification, String sound, String lights) {
+    private void sendNotification(String id, String title, String messageBody, Map<String, String> data, String sound, String lights) {
         Bundle bundle = new Bundle();
         for (String key : data.keySet()) {
             bundle.putString(key, data.get(key));
         }
 
-        if (showNotification) {
-            Intent intent = new Intent(this, OnNotificationOpenReceiver.class);
-            intent.putExtras(bundle);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(this, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        Intent intent = new Intent(this, OnNotificationOpenReceiver.class);
+        intent.putExtras(bundle);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, id.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-            String channelId = this.getStringResource("default_notification_channel_id");
-            String channelName = this.getStringResource("default_notification_channel_name");
-            Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+        String channelId = this.getStringResource("default_notification_channel_id");
+        String channelName = this.getStringResource("default_notification_channel_name");
+        Uri defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
-            NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelId);
-            notificationBuilder
-                    .setContentTitle(title)
-                    .setContentText(messageBody)
-                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                    .setStyle(new NotificationCompat.BigTextStyle().bigText(messageBody))
-                    .setAutoCancel(true)
-                    .setSound(defaultSoundUri)
-                    .setContentIntent(pendingIntent)
-                    .setPriority(NotificationCompat.PRIORITY_MAX);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, channelId);
+        notificationBuilder
+                .setContentTitle(title)
+                .setContentText(messageBody)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setStyle(new NotificationCompat.BigTextStyle().bigText(messageBody))
+                .setAutoCancel(true)
+                .setSound(defaultSoundUri)
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_MAX);
 
-            int resID = getResources().getIdentifier("notification_icon", "drawable", getPackageName());
-            if (resID != 0) {
-                notificationBuilder.setSmallIcon(resID);
-            } else {
-                notificationBuilder.setSmallIcon(getApplicationInfo().icon);
-            }
-
-            if (sound != null) {
-                Log.d(TAG, "sound before path is: " + sound);
-                Uri soundPath = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getPackageName() + "/raw/" + sound);
-                Log.d(TAG, "Parsed sound is: " + soundPath.toString());
-                notificationBuilder.setSound(soundPath);
-            } else {
-                Log.d(TAG, "Sound was null ");
-            }
-
-            if (lights != null) {
-                try {
-                    String[] lightsComponents = lights.replaceAll("\\s", "").split(",");
-                    if (lightsComponents.length == 3) {
-                        int lightArgb = Color.parseColor(lightsComponents[0]);
-                        int lightOnMs = Integer.parseInt(lightsComponents[1]);
-                        int lightOffMs = Integer.parseInt(lightsComponents[2]);
-
-                        notificationBuilder.setLights(lightArgb, lightOnMs, lightOffMs);
-                    }
-                } catch (Exception e) {
-                }
-            }
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-                int accentID = getResources().getIdentifier("accent", "color", getPackageName());
-                notificationBuilder.setColor(getResources().getColor(accentID, null));
-
-            }
-
-            Notification notification = notificationBuilder.build();
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                int iconID = android.R.id.icon;
-                int notiID = getResources().getIdentifier("notification_big", "drawable", getPackageName());
-                if (notification.contentView != null) {
-                    notification.contentView.setImageViewResource(iconID, notiID);
-                }
-            }
-            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-
-            // Since android Oreo notification channel is needed.
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
-                notificationManager.createNotificationChannel(channel);
-            }
-
-            notificationManager.notify(id.hashCode(), notification);
+        int resID = getResources().getIdentifier("notification_icon", "drawable", getPackageName());
+        if (resID != 0) {
+            notificationBuilder.setSmallIcon(resID);
         } else {
-            bundle.putBoolean("tap", false);
-            bundle.putString("title", title);
-            bundle.putString("body", messageBody);
-            FirebasePlugin.sendNotification(bundle, this.getApplicationContext());
+            notificationBuilder.setSmallIcon(getApplicationInfo().icon);
         }
+
+        if (sound != null) {
+            Log.d(TAG, "sound before path is: " + sound);
+            Uri soundPath = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + getPackageName() + "/raw/" + sound);
+            Log.d(TAG, "Parsed sound is: " + soundPath.toString());
+            notificationBuilder.setSound(soundPath);
+        } else {
+            Log.d(TAG, "Sound was null ");
+        }
+
+        if (lights != null) {
+            try {
+                String[] lightsComponents = lights.replaceAll("\\s", "").split(",");
+                if (lightsComponents.length == 3) {
+                    int lightArgb = Color.parseColor(lightsComponents[0]);
+                    int lightOnMs = Integer.parseInt(lightsComponents[1]);
+                    int lightOffMs = Integer.parseInt(lightsComponents[2]);
+
+                    notificationBuilder.setLights(lightArgb, lightOnMs, lightOffMs);
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            int accentID = getResources().getIdentifier("accent", "color", getPackageName());
+            notificationBuilder.setColor(getResources().getColor(accentID, null));
+
+        }
+
+        Notification notification = notificationBuilder.build();
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            int iconID = android.R.id.icon;
+            int notiID = getResources().getIdentifier("notification_big", "drawable", getPackageName());
+            if (notification.contentView != null) {
+                notification.contentView.setImageViewResource(iconID, notiID);
+            }
+        }
+        NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+
+        // Since android Oreo notification channel is needed.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(channelId, channelName, NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channel);
+        }
+
+        notificationManager.notify(id.hashCode(), notification);
     }
 }
